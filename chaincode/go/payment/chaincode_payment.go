@@ -60,10 +60,11 @@ func (t *PaymentChaincode) request(stub shim.ChaincodeStubInterface, args []stri
 	}
 
 	cardNumber := args[0]
-
-	cardKey, _ := stub.CreateCompositeKey("Card", []string{cardNumber})
-
 	amount = args[1]
+	company = args[2]
+
+
+	cardKey, _ := stub.CreateCompositeKey("Card", []string{cardNumber, company})
 
 	// Get the state from the ledger
 	amountBytes, err := stub.GetState(cardKey)
@@ -92,13 +93,14 @@ func (t *PaymentChaincode) query(stub shim.ChaincodeStubInterface, args []string
 
 	var err error
 
-	if len(args) != 1 {
+	if len(args) != 2 {
 		return pb.Response{Status:403, Message:"Incorrect number of arguments"}
 	}
 
 	cardNumber := args[0]
+	company := args[1]
 
-	cardKey, _ := stub.CreateCompositeKey("Card", []string{cardNumber})
+	cardKey, _ := stub.CreateCompositeKey("Card", []string{cardNumber, company})
 
 	// Get the state from the ledger
 	valBytes, err := stub.GetState(cardKey)
