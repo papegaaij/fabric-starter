@@ -20,39 +20,6 @@ type PaymentChaincode struct {
 func (t *PaymentChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	logger.Debug("Init")
 
-	_, args := stub.GetFunctionAndParameters()
-	var a, b string    // Entities
-	var aVal, bVal int // Asset holdings
-	var err error
-
-	if len(args) != 4 {
-		return pb.Response{Status:403, Message:"Incorrect number of arguments. Expecting 4"}
-	}
-
-	// Initialize the chaincode
-	a = args[0]
-	aVal, err = strconv.Atoi(args[1])
-	if err != nil {
-		return pb.Response{Status:403, Message:"Expecting integer value for asset holding"}
-	}
-	b = args[2]
-	bVal, err = strconv.Atoi(args[3])
-	if err != nil {
-		return pb.Response{Status:403, Message:"Expecting integer value for asset holding"}
-	}
-	logger.Debugf("aVal, bVal = %d", aVal, bVal)
-
-	// Write the state to the ledger
-	err = stub.PutState(a, []byte(strconv.Itoa(aVal)))
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-
-	err = stub.PutState(b, []byte(strconv.Itoa(bVal)))
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-
 	return shim.Success(nil)
 }
 
@@ -69,12 +36,12 @@ func (t *PaymentChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response 
 	logger.Debug("transaction creator " + name + "@" + org)
 
 	function, args := stub.GetFunctionAndParameters()
-	if function == "move" {
+	if function == "request" {
 		// Make payment of x units from a to b
-		return t.move(stub, args)
-	} else if function == "delete" {
+		return t.request(stub, args)
+	} /*else if function == "delete" {
 		// Deletes an entity from its state
-		return t.delete(stub, args)
+		return t.delete(stub, args)*/
 	} else if function == "query" {
 		// the old "Query" is now implemented in invoke
 		return t.query(stub, args)
@@ -84,91 +51,57 @@ func (t *PaymentChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response 
 }
 
 // Transaction makes payment of x units from a to b
-func (t *PaymentChaincode) move(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	var a, b string    // Entities
-	var aVal, bVal int // Asset holdings
-	var x int          // Transaction value
+func (t *PaymentChaincode) request(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+
 	var err error
 
-	if len(args) != 3 {
-		return shim.Error("Incorrect number of arguments. Expecting 3")
+	if len(args) != 2 {
+		return shim.Error("Incorrect number of arguments. Expecting 2")
 	}
 
-	a = args[0]
-	b = args[1]
+	cardNumber := args[0]
+
+	cardKey, _ := stub.CreateCompositeKey("Card", []string{cardNumber})
+
+	amount = args[1]
 
 	// Get the state from the ledger
-	aBytes, err := stub.GetState(a)
+	amountBytes, err := stub.GetState(cardKey)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
-	if aBytes == nil {
-		return pb.Response{Status:404, Message:"Entity not found"}
+	
+	if amountBytes != nil {
+		amountOldVal, _ = strconv.Atoi(string(amountBytes))
+		amount = amount + amountOldVal
 	}
-	aVal, _ = strconv.Atoi(string(aBytes))
-
-	bBytes, err := stub.GetState(b)
-	if err != nil {
-		return shim.Error("Failed to get state")
-	}
-	if bBytes == nil {
-		return pb.Response{Status:404, Message:"Entity not found"}
-	}
-	bVal, _ = strconv.Atoi(string(bBytes))
-
-	// Perform the execution
-	x, err = strconv.Atoi(args[2])
-	if err != nil {
-		return pb.Response{Status:403, Message:"Invalid transaction amount, expecting an integer value"}
-	}
-	aVal = aVal - x
-	bVal = bVal + x
-	logger.Debug("aVal = %d, bVal = %d\n", aVal, bVal)
+	
 
 	// Write the state back to the ledger
-	err = stub.PutState(a, []byte(strconv.Itoa(aVal)))
+	err = stub.PutState(cardKey, []byte(strconv.Itoa(amount))
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 
-	err = stub.PutState(b, []byte(strconv.Itoa(bVal)))
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-
-	return shim.Success(nil)
+	return shim.Success(amount)
 }
 
-// deletes an entity from state
-func (t *PaymentChaincode) delete(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+
+// read value
+func (t *PaymentChaincode) query(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+
+	var err error
+
 	if len(args) != 1 {
 		return pb.Response{Status:403, Message:"Incorrect number of arguments"}
 	}
 
-	a := args[0]
+	cardNumber := args[0]
 
-	// Delete the key from the state in ledger
-	err := stub.DelState(a)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-
-	return shim.Success(nil)
-}
-
-// read value
-func (t *PaymentChaincode) query(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	var a string // Entities
-	var err error
-
-	//if len(args) != 1 {
-	//	return pb.Response{Status:403, Message:"Incorrect number of arguments"}
-	//}
-
-	a = args[0]
+	cardKey, _ := stub.CreateCompositeKey("Card", []string{cardNumber})
 
 	// Get the state from the ledger
-	valBytes, err := stub.GetState(a)
+	valBytes, err := stub.GetState(cardKey)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
