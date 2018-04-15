@@ -60,11 +60,11 @@ func (t *PaymentChaincode) request(stub shim.ChaincodeStubInterface, args []stri
 	}
 
 	cardNumber := args[0]
-	amount = args[1]
-	company = args[2]
+	company := args[2]
 
 
 	cardKey, _ := stub.CreateCompositeKey("Card", []string{cardNumber, company})
+	amount, _ := strconv.Atoi(args[1])
 
 	// Get the state from the ledger
 	amountBytes, err := stub.GetState(cardKey)
@@ -73,18 +73,18 @@ func (t *PaymentChaincode) request(stub shim.ChaincodeStubInterface, args []stri
 	}
 	
 	if amountBytes != nil {
-		amountOldVal, _ = strconv.Atoi(string(amountBytes))
+		amountOldVal, _ := strconv.Atoi(string(amountBytes))
 		amount = amount + amountOldVal
 	}
 	
 
 	// Write the state back to the ledger
-	err = stub.PutState(cardKey, []byte(strconv.Itoa(amount))
+	err = stub.PutState(cardKey, []byte(strconv.Itoa(amount)))
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 
-	return shim.Success(amount)
+	return shim.Success([]byte(strconv.Itoa(amount)))
 }
 
 

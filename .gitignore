@@ -7,6 +7,9 @@ fabric-rest-api.ipr
 fabric-rest-api.iws
 .gradle
 build
+*.iws
+*.ipr
+*.iml
 
 /artifacts/
 /artifacts/crypto-config/
