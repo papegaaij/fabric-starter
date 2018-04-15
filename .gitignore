@@ -8,6 +8,7 @@ fabric-rest-api.iws
 .gradle
 build
 
+/artifacts/
 /artifacts/crypto-config/
 /artifacts/channel/
 /artifacts/cryptogen-*.yaml
