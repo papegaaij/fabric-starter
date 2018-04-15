@@ -11,13 +11,13 @@ import (
 	"strings"
 )
 
-var logger = shim.NewLogger("SimpleChaincode")
+var logger = shim.NewLogger("PaymentChaincode")
 
-// SimpleChaincode example simple Chaincode implementation
-type SimpleChaincode struct {
+// PaymentChaincode example simple Chaincode implementation
+type PaymentChaincode struct {
 }
 
-func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
+func (t *PaymentChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	logger.Debug("Init")
 
 	_, args := stub.GetFunctionAndParameters()
@@ -56,7 +56,7 @@ func (t *SimpleChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	return shim.Success(nil)
 }
 
-func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
+func (t *PaymentChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	logger.Debug("Invoke")
 
 	creatorBytes, err := stub.GetCreator()
@@ -84,7 +84,7 @@ func (t *SimpleChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 }
 
 // Transaction makes payment of x units from a to b
-func (t *SimpleChaincode) move(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+func (t *PaymentChaincode) move(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	var a, b string    // Entities
 	var aVal, bVal int // Asset holdings
 	var x int          // Transaction value
@@ -140,7 +140,7 @@ func (t *SimpleChaincode) move(stub shim.ChaincodeStubInterface, args []string) 
 }
 
 // deletes an entity from state
-func (t *SimpleChaincode) delete(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+func (t *PaymentChaincode) delete(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	if len(args) != 1 {
 		return pb.Response{Status:403, Message:"Incorrect number of arguments"}
 	}
@@ -157,7 +157,7 @@ func (t *SimpleChaincode) delete(stub shim.ChaincodeStubInterface, args []string
 }
 
 // read value
-func (t *SimpleChaincode) query(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+func (t *PaymentChaincode) query(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	var a string // Entities
 	var err error
 
@@ -194,7 +194,7 @@ var getCreator = func (certificate []byte) (string, string) {
 }
 
 func main() {
-	err := shim.Start(new(SimpleChaincode))
+	err := shim.Start(new(PaymentChaincode))
 	if err != nil {
 		logger.Error(err.Error())
 	}
