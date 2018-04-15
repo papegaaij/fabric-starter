@@ -5,8 +5,8 @@
 version: '2'
 
 volumes:
-  peer0.ORG.DOMAIN:
-  peer1.ORG.DOMAIN:
+#  peer0.ORG.DOMAIN:
+#  peer1.ORG.DOMAIN:
 
 services:
 
