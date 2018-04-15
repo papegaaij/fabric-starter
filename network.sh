@@ -11,14 +11,16 @@ artifactsTemplatesFolder="artifact-templates"
 : ${GENERATED_ARTIFACTS_FOLDER:=./artifacts}
 : ${GENERATED_DOCKER_COMPOSE_FOLDER:=./dockercompose}
 
-: ${DOMAIN:="example.com"}
+: ${DOMAIN:="transport-chain.nl"}
 : ${IP_ORDERER:="54.234.201.67"}
-: ${ORG1:="a"}
-: ${ORG2:="b"}
-: ${ORG3:="c"}
+: ${ORG1:="card"}
+: ${ORG2:="bank"}
+: ${ORG3:="ns"}
+: ${ORG4:="veolia"}
 : ${IP1:="54.86.191.160"}
 : ${IP2:="54.243.0.168"}
 : ${IP3:="54.211.142.174"}
+: ${IP4:="54.211.142.174"}
 
 echo "Use Fabric-Starter home: $FABRIC_STARTER_HOME"
 echo "Use docker compose template folder: $TEMPLATES_DOCKER_COMPOSE_FOLDER"
@@ -37,11 +39,6 @@ CLI_TIMEOUT=10000
 COMPOSE_TEMPLATE=$TEMPLATES_DOCKER_COMPOSE_FOLDER/docker-composetemplate.yaml
 COMPOSE_FILE_DEV=$TEMPLATES_DOCKER_COMPOSE_FOLDER/docker-composedev.yaml
 
-CHAINCODE_COMMON_NAME=reference
-CHAINCODE_BILATERAL_NAME=relationship
-CHAINCODE_COMMON_INIT='{"Args":["init","a","100","b","100"]}'
-CHAINCODE_BILATERAL_INIT='{"Args":["init","a","100","b","100"]}'
-
 DEFAULT_ORDERER_PORT=7050
 DEFAULT_WWW_PORT=8080
 DEFAULT_API_PORT=4000
@@ -52,9 +49,9 @@ DEFAULT_PEER1_PORT=7056
 DEFAULT_PEER1_EVENT_PORT=7058
 
 DEFAULT_PEER_EXTRA_HOSTS="extra_hosts:[newline]      - orderer.$DOMAIN:$IP_ORDERER"
-DEFAULT_CLI_EXTRA_HOSTS="extra_hosts:[newline]      - orderer.$DOMAIN:$IP_ORDERER[newline]      - www.$DOMAIN:$IP_ORDERER[newline]      - www.$ORG1.$DOMAIN:$IP1[newline]      - www.$ORG2.$DOMAIN:$IP2[newline]      - www.$ORG3.$DOMAIN:$IP3"
-DEFAULT_API_EXTRA_HOSTS1="extra_hosts:[newline]      - orderer.$DOMAIN:$IP_ORDERER[newline]      - peer0.$ORG2.$DOMAIN:$IP2[newline]      - peer0.$ORG3.$DOMAIN:$IP3"
-DEFAULT_API_EXTRA_HOSTS2="extra_hosts:[newline]      - orderer.$DOMAIN:$IP_ORDERER[newline]      - peer0.$ORG1.$DOMAIN:$IP1[newline]      - peer0.$ORG3.$DOMAIN:$IP3"
+DEFAULT_CLI_EXTRA_HOSTS="extra_hosts:[newline]      - orderer.$DOMAIN:$IP_ORDERER[newline]      - www.$DOMAIN:$IP_ORDERER[newline]      - www.$ORG1.$DOMAIN:$IP1[newline]      - www.$ORG2.$DOMAIN:$IP2[newline]      - www.$ORG3.$DOMAIN:$IP3      - www.$ORG4.$DOMAIN:$IP4"
+DEFAULT_API_EXTRA_HOSTS1="extra_hosts:[newline]      - orderer.$DOMAIN:$IP_ORDERER[newline]      - peer0.$ORG2.$DOMAIN:$IP2[newline]      - peer0.$ORG3.$DOMAIN:$IP3      - peer0.$ORG4.$DOMAIN:$IP4"
+DEFAULT_API_EXTRA_HOSTS2="extra_hosts:[newline]      - orderer.$DOMAIN:$IP_ORDERER[newline]      - peer0.$ORG1.$DOMAIN:$IP1[newline]      - peer0.$ORG3.$DOMAIN:$IP3      - peer0.$ORG4.$DOMAIN:$IP4"
 DEFAULT_API_EXTRA_HOSTS3="extra_hosts:[newline]      - orderer.$DOMAIN:$IP_ORDERER[newline]      - peer0.$ORG1.$DOMAIN:$IP1[newline]      - peer0.$ORG2.$DOMAIN:$IP2"
 
 GID=$(id -g)
@@ -95,7 +92,7 @@ function removeArtifacts() {
 }
 
 function removeDockersFromAllCompose() {
-    for o in ${DOMAIN} ${ORG1} ${ORG2} ${ORG3}
+    for o in ${DOMAIN} ${ORG1} ${ORG2} ${ORG3} ${ORG4}
     do
       removeDockersFromCompose ${o}
     done
@@ -137,14 +134,14 @@ function removeDockersWithOrg() {
 
 function generateOrdererDockerCompose() {
     mainOrg=$1
-    echo "Creating orderer docker compose yaml file with $DOMAIN, $ORG1, $ORG2, $ORG3, $DEFAULT_ORDERER_PORT, $DEFAULT_WWW_PORT"
+    echo "Creating orderer docker compose yaml file with $DOMAIN, $ORG1, $ORG2, $ORG3, $ORG4, $DEFAULT_ORDERER_PORT, $DEFAULT_WWW_PORT"
 
     compose_template=$TEMPLATES_DOCKER_COMPOSE_FOLDER/docker-composetemplate-orderer.yaml
     f="$GENERATED_DOCKER_COMPOSE_FOLDER/docker-compose-$DOMAIN.yaml"
 
     cli_extra_hosts=${DEFAULT_CLI_EXTRA_HOSTS}
 
-    sed -e "s/DOMAIN/$DOMAIN/g" -e "s/MAIN_ORG/$mainOrg/g" -e "s/CLI_EXTRA_HOSTS/$cli_extra_hosts/g" -e "s/ORDERER_PORT/$DEFAULT_ORDERER_PORT/g" -e "s/WWW_PORT/$DEFAULT_WWW_PORT/g" -e "s/ORG1/$ORG1/g" -e "s/ORG2/$ORG2/g" -e "s/ORG3/$ORG3/g" ${compose_template} | awk '{gsub(/\[newline\]/, "\n")}1' > ${f}
+    sed -e "s/DOMAIN/$DOMAIN/g" -e "s/MAIN_ORG/$mainOrg/g" -e "s/CLI_EXTRA_HOSTS/$cli_extra_hosts/g" -e "s/ORDERER_PORT/$DEFAULT_ORDERER_PORT/g" -e "s/WWW_PORT/$DEFAULT_WWW_PORT/g" -e "s/ORG1/$ORG1/g" -e "s/ORG2/$ORG2/g" -e "s/ORG3/$ORG3/g" -e "s/ORG4/$ORG4/g" ${compose_template} | awk '{gsub(/\[newline\]/, "\n")}1' > ${f}
 }
 
 function generateNetworkConfig() {
@@ -207,7 +204,7 @@ function addOrgToNetworkConfig() {
 function generateOrdererArtifacts() {
     org=$1
 
-    echo "Creating orderer yaml files with $DOMAIN, $ORG1, $ORG2, $ORG3, $DEFAULT_ORDERER_PORT, $DEFAULT_WWW_PORT"
+    echo "Creating orderer yaml files with $DOMAIN, $ORG1, $ORG2, $ORG3, $ORG4, $DEFAULT_ORDERER_PORT, $DEFAULT_WWW_PORT"
 
     f="$GENERATED_DOCKER_COMPOSE_FOLDER/docker-compose-$DOMAIN.yaml"
 
@@ -217,12 +214,12 @@ function generateOrdererArtifacts() {
     if [[ -n "$org" ]]; then
         generateNetworkConfig ${org}
         sed -e "s/DOMAIN/$DOMAIN/g" -e "s/ORG1/$org/g" "$TEMPLATES_ARTIFACTS_FOLDER/configtxtemplate-oneOrg-orderer.yaml" > $GENERATED_ARTIFACTS_FOLDER/configtx.yaml
-        createChannels=("common")
+        createChannels=("transport")
     else
-        generateNetworkConfig ${ORG1} ${ORG2} ${ORG3}
+        generateNetworkConfig ${ORG1} ${ORG2} ${ORG3} ${ORG4}
         # replace in configtx
-        sed -e "s/DOMAIN/$DOMAIN/g" -e "s/ORG1/$ORG1/g" -e "s/ORG2/$ORG2/g" -e "s/ORG3/$ORG3/g" $TEMPLATES_ARTIFACTS_FOLDER/configtxtemplate.yaml > $GENERATED_ARTIFACTS_FOLDER/configtx.yaml
-        createChannels=("common" "$ORG1-$ORG2" "$ORG1-$ORG3" "$ORG2-$ORG3")
+        sed -e "s/DOMAIN/$DOMAIN/g" -e "s/ORG1/$ORG1/g" -e "s/ORG2/$ORG2/g" -e "s/ORG3/$ORG3/g" -e "s/ORG4/$ORG4/g" $TEMPLATES_ARTIFACTS_FOLDER/configtxtemplate.yaml > $GENERATED_ARTIFACTS_FOLDER/configtx.yaml
+        createChannels=("transport" "card-bank" "bank-transport")
     fi
 
 
@@ -262,6 +259,8 @@ function generatePeerArtifacts() {
         api_extra_hosts=${DEFAULT_API_EXTRA_HOSTS2}
       elif [ ${org} == ${ORG3} ]; then
         api_extra_hosts=${DEFAULT_API_EXTRA_HOSTS3}
+      elif [ ${org} == ${ORG4} ]; then
+        api_extra_hosts=${DEFAULT_API_EXTRA_HOSTS4}
       fi
     fi
 
@@ -539,7 +538,7 @@ function installAll() {
 
   sleep 2
 
-  for chaincode_name in ${CHAINCODE_COMMON_NAME} ${CHAINCODE_BILATERAL_NAME}
+  for chaincode_name in issue travel payment
   do
     installChaincode ${org} ${chaincode_name} "1.0"
   done
@@ -571,7 +570,7 @@ function createJoinInstantiateWarmUp() {
 function makeCertDirs() {
   mkdir -p "$GENERATED_ARTIFACTS_FOLDER/crypto-config/ordererOrganizations/$DOMAIN/orderers/orderer.$DOMAIN/tls"
 
-#  for org in ${ORG1} ${ORG2} ${ORG3}
+#  for org in ${ORG1} ${ORG2} ${ORG3} ${ORG4}
    for certDirsOrg in "$@"
     do
         d="$GENERATED_ARTIFACTS_FOLDER/crypto-config/peerOrganizations/$certDirsOrg.$DOMAIN/peers/peer0.$certDirsOrg.$DOMAIN/tls"
@@ -586,7 +585,7 @@ function downloadMemberMSP() {
 
     info "downloading member MSP files using $f"
 
-   #${ORG1} ${ORG2} ${ORG3}
+   #${ORG1} ${ORG2} ${ORG3} ${ORG4}
 
     c="for ORG in ${@}; do wget ${WGET_OPTS} --directory-prefix crypto-config/peerOrganizations/\$ORG.$DOMAIN/msp/admincerts http://www.\$ORG.$DOMAIN:$DEFAULT_WWW_PORT/crypto-config/peerOrganizations/\$ORG.$DOMAIN/msp/admincerts/Admin@\$ORG.$DOMAIN-cert.pem && wget ${WGET_OPTS} --directory-prefix crypto-config/peerOrganizations/\$ORG.$DOMAIN/msp/cacerts http://www.\$ORG.$DOMAIN:$DEFAULT_WWW_PORT/crypto-config/peerOrganizations/\$ORG.$DOMAIN/msp/cacerts/ca.\$ORG.$DOMAIN-cert.pem && wget ${WGET_OPTS} --directory-prefix crypto-config/peerOrganizations/\$ORG.$DOMAIN/msp/tlscacerts http://www.\$ORG.$DOMAIN:$DEFAULT_WWW_PORT/crypto-config/peerOrganizations/\$ORG.$DOMAIN/msp/tlscacerts/tlsca.\$ORG.$DOMAIN-cert.pem; done"
     echo ${c}
@@ -648,7 +647,7 @@ function downloadChannelBlockFile() {
 }
 
 function downloadArtifactsMember() {
-  makeCertDirs ${ORG1} ${ORG2} ${ORG3}
+  makeCertDirs ${ORG1} ${ORG2} ${ORG3} ${ORG4}
 
   org=$1
   mainOrg=$2
@@ -667,7 +666,7 @@ function downloadArtifactsMember() {
   #TODO download not from all members but from the orderer
   info "downloading member cert files using $f"
 
-  c="for ORG in ${ORG1} ${ORG2} ${ORG3}; do wget ${WGET_OPTS} --directory-prefix crypto-config/peerOrganizations/\${ORG}.$DOMAIN/peers/peer0.\${ORG}.$DOMAIN/tls http://www.\${ORG}.$DOMAIN:$DEFAULT_WWW_PORT/crypto-config/peerOrganizations/\${ORG}.$DOMAIN/peers/peer0.\${ORG}.$DOMAIN/tls/ca.crt; done"
+  c="for ORG in ${ORG1} ${ORG2} ${ORG3} ${ORG4}; do wget ${WGET_OPTS} --directory-prefix crypto-config/peerOrganizations/\${ORG}.$DOMAIN/peers/peer0.\${ORG}.$DOMAIN/tls http://www.\${ORG}.$DOMAIN:$DEFAULT_WWW_PORT/crypto-config/peerOrganizations/\${ORG}.$DOMAIN/peers/peer0.\${ORG}.$DOMAIN/tls/ca.crt; done"
   echo ${c}
   docker-compose --file ${f} run --rm "cli.$org.$DOMAIN" bash -c "${c} && chown -R $UID:$GID ."
 
@@ -681,19 +680,19 @@ function downloadArtifactsMember() {
 }
 
 function downloadArtifactsOrderer() {
-#  for org in ${ORG1} ${ORG2} ${ORG3}
+#  for org in ${ORG1} ${ORG2} ${ORG3} ${ORG4}
 #    do
 #      rm -rf "artifacts/crypto-config/peerOrganizations/$org.$DOMAIN"
 #    done
 
   mainOrg=$1
   if [ -z "$mainOrg" ]; then
-      makeCertDirs ${ORG1} ${ORG2} ${ORG3}
-      downloadMemberMSP ${ORG1} ${ORG2} ${ORG3}
+      makeCertDirs ${ORG1} ${ORG2} ${ORG3} ${ORG4}
+      downloadMemberMSP ${ORG1} ${ORG2} ${ORG3} ${ORG4}
 
       info "downloading member cert files using $f"
 
-      c="for ORG in ${ORG1} ${ORG2} ${ORG3}; do wget ${WGET_OPTS} --directory-prefix crypto-config/peerOrganizations/\${ORG}.$DOMAIN/peers/peer0.\${ORG}.$DOMAIN/tls http://www.\${ORG}.$DOMAIN:$DEFAULT_WWW_PORT/crypto-config/peerOrganizations/\${ORG}.$DOMAIN/peers/peer0.\${ORG}.$DOMAIN/tls/ca.crt; done"
+      c="for ORG in ${ORG1} ${ORG2} ${ORG3} ${ORG4}; do wget ${WGET_OPTS} --directory-prefix crypto-config/peerOrganizations/\${ORG}.$DOMAIN/peers/peer0.\${ORG}.$DOMAIN/tls http://www.\${ORG}.$DOMAIN:$DEFAULT_WWW_PORT/crypto-config/peerOrganizations/\${ORG}.$DOMAIN/peers/peer0.\${ORG}.$DOMAIN/tls/ca.crt; done"
       echo ${c}
     #  executeBashCmdInCli "docker-compose-$DOMAIN.yaml" "cli.$DOMAIN" "${c} && chown -R $UID:$GID ."
       f="$GENERATED_DOCKER_COMPOSE_FOLDER/docker-compose-$DOMAIN.yaml"
@@ -766,15 +765,15 @@ function addOrg() {
 
   d="cli.$ORG1.$DOMAIN"
   c="peer channel fetch config config_block.pb -o orderer.$DOMAIN:7050 -c $channel --tls --cafile /etc/hyperledger/crypto/orderer/tls/ca.crt \
-  && curl -X POST --data-binary @config_block.pb http://127.0.0.1:7059/protolator/decode/common.Block | jq . > config_block.json \
+  && curl -X POST --data-binary @config_block.pb http://127.0.0.1:7059/protolator/decode/transport.Block | jq . > config_block.json \
   && jq .data.data[0].payload.data.config config_block.json > config.json \
   && jq -s '.[0] * {\"channel_group\":{\"groups\":{\"Application\":{\"groups\": {\"${org}MSP\":.[1]}}}}}' config.json newOrgMSP.json >& updated_config.json \
-  && curl -X POST --data-binary @config.json http://127.0.0.1:7059/protolator/encode/common.Config > config.pb \
-  && curl -X POST --data-binary @updated_config.json http://127.0.0.1:7059/protolator/encode/common.Config > updated_config.pb \
+  && curl -X POST --data-binary @config.json http://127.0.0.1:7059/protolator/encode/transport.Config > config.pb \
+  && curl -X POST --data-binary @updated_config.json http://127.0.0.1:7059/protolator/encode/transport.Config > updated_config.pb \
   && curl -X POST -F channel=$channel -F 'original=@config.pb' -F 'updated=@updated_config.pb' http://127.0.0.1:7059/configtxlator/compute/update-from-configs > update.pb \
-  && curl -X POST --data-binary @update.pb http://127.0.0.1:7059/protolator/decode/common.ConfigUpdate | jq . > update.json \
+  && curl -X POST --data-binary @update.pb http://127.0.0.1:7059/protolator/decode/transport.ConfigUpdate | jq . > update.json \
   && echo '{\"payload\":{\"header\":{\"channel_header\":{\"channel_id\":\"$channel\",\"type\":2}},\"data\":{\"config_update\":'\`cat update.json\`'}}}' | jq . > update_in_envelope.json \
-  && curl -X POST --data-binary @update_in_envelope.json http://127.0.0.1:7059/protolator/encode/common.Envelope > update_in_envelope.pb"
+  && curl -X POST --data-binary @update_in_envelope.json http://127.0.0.1:7059/protolator/encode/transport.Envelope > update_in_envelope.pb"
 
   info "$ORG1 is generating config tx file update_in_envelope.pb with $d by $c"
   docker exec ${d} bash -c "$c"
@@ -805,7 +804,7 @@ function addOrg() {
   v="2.0"
   policy="OR ('${ORG1}MSP.member','${ORG2}MSP.member','${ORG3}MSP.member','${org}MSP.member')"
 
-  for o in ${ORG1} ${ORG2} ${ORG3} ${org}
+  for o in ${ORG1} ${ORG2} ${ORG3} ${ORG4} ${org}
     do
       installChaincode ${o} ${CHAINCODE_COMMON_NAME} ${v}
     done
@@ -815,7 +814,7 @@ function addOrg() {
 
 ##################################
 #
-# expects org name, ip address and common channels list to register organization in respectively as arguments.
+# expects org name, ip address and transport channels list to register organization in respectively as arguments.
 #
 # for each provided channel, calls for a specific registerNewOrgInChannel function, which registers the channel in
 # the specified channel, one by one.
@@ -854,7 +853,7 @@ function registerNewOrg() {
 # given the new config json file,
 #
 # Example usage:
-# generateConfigUpdateEnvelop $ORG1 common "jq -s '.[0] * {\"channel_group\":{\"groups\":{\"Application\":{\"mod_policy\": \"${policyName}\", \"policies\":.[1]}}}}' config.json new_policy.json"
+# generateConfigUpdateEnvelop $ORG1 transport "jq -s '.[0] * {\"channel_group\":{\"groups\":{\"Application\":{\"mod_policy\": \"${policyName}\", \"policies\":.[1]}}}}' config.json new_policy.json"
 #
 #################################
 function updateChannelConfig() {
@@ -890,19 +889,19 @@ function updateChannelConfig() {
 
   startConfigTxlator ${org}
 
-  command="curl -X POST --data-binary @config_block.pb ${configtxlatorServer}/protolator/decode/common.Block | jq . > config_block.json \
+  command="curl -X POST --data-binary @config_block.pb ${configtxlatorServer}/protolator/decode/transport.Block | jq . > config_block.json \
   && jq .data.data[0].payload.data.config config_block.json > config.json"
 
   echo $command
   eval $command
   eval "jq -s ${configReplacementScript}" > updated_config.json
 
-  command="curl -X POST --data-binary @config.json ${configtxlatorServer}/protolator/encode/common.Config > config.pb \
-  && curl -X POST --data-binary @updated_config.json ${configtxlatorServer}/protolator/encode/common.Config > updated_config.pb \
+  command="curl -X POST --data-binary @config.json ${configtxlatorServer}/protolator/encode/transport.Config > config.pb \
+  && curl -X POST --data-binary @updated_config.json ${configtxlatorServer}/protolator/encode/transport.Config > updated_config.pb \
   && curl -X POST -F channel=$channel -F 'original=@config.pb' -F 'updated=@updated_config.pb' ${configtxlatorServer}/configtxlator/compute/update-from-configs > update.pb \
-  && curl -X POST --data-binary @update.pb ${configtxlatorServer}/protolator/decode/common.ConfigUpdate | jq . > update.json \
+  && curl -X POST --data-binary @update.pb ${configtxlatorServer}/protolator/decode/transport.ConfigUpdate | jq . > update.json \
   && echo '{\"payload\":{\"header\":{\"channel_header\":{\"channel_id\":\"$channel\",\"type\":2}},\"data\":{\"config_update\":'\`cat update.json\`'}}}' | jq . > update_in_envelope.json \
-  && curl -X POST --data-binary @update_in_envelope.json ${configtxlatorServer}/protolator/encode/common.Envelope > update_in_envelope.pb \
+  && curl -X POST --data-binary @update_in_envelope.json ${configtxlatorServer}/protolator/encode/transport.Envelope > update_in_envelope.pb \
   && echo 'Finished update_in_envelope.pb preparation!' && pkill configtxlator"
 
 
@@ -949,20 +948,20 @@ function registerNewOrgInChannel() {
 #
 #  command="rm -rf ${new_org}_config_block.pb ${new_org}_config_block.json ${new_org}_config.json ${new_org}_config.pb updated_${new_org}_config.json updated_${new_org}_config.pb update_${new_org}.json update_${new_org}.pb update_${new_org}_in_envelope.json \
 #  && peer channel fetch config ${new_org}_config_block.pb -o orderer.$DOMAIN:7050 -c $channel --tls --cafile /etc/hyperledger/crypto/orderer/tls/ca.crt \
-#  && curl -X POST --data-binary @${new_org}_config_block.pb http://127.0.0.1:7059/protolator/decode/common.Block | jq . > ${new_org}_config_block.json \
+#  && curl -X POST --data-binary @${new_org}_config_block.pb http://127.0.0.1:7059/protolator/decode/transport.Block | jq . > ${new_org}_config_block.json \
 #  && echo 'wc for artifacts/${new_org}_config_block.json: $(wc -c < artifacts/${org}_config_block.json)' \
 #  && jq .data.data[0].payload.data.config ${new_org}_config_block.json > ${new_org}_config.json \
 #  && echo 'wc for artifacts/${new_org}_config.json: $(wc -c < artifacts/${org}_config.json)' \
 #  && jq -s '.[0] * {\"channel_group\":{\"groups\":{\"Application\":{\"groups\": {\"${new_org}MSP\":.[1]}}}}}' ${new_org}_config.json ${new_org}Config.json >& updated_${new_org}_config.json \
 #  && echo 'wc for artifacts/updated_${new_org}_config.json: $(wc -c < artifacts/updated_${new_org}_config.json)' \
-#  && curl -X POST --data-binary @${new_org}_config.json http://127.0.0.1:7059/protolator/encode/common.Config > ${new_org}_config.pb \
-#  && curl -X POST --data-binary @updated_${new_org}_config.json http://127.0.0.1:7059/protolator/encode/common.Config > updated_${new_org}_config.pb \
+#  && curl -X POST --data-binary @${new_org}_config.json http://127.0.0.1:7059/protolator/encode/transport.Config > ${new_org}_config.pb \
+#  && curl -X POST --data-binary @updated_${new_org}_config.json http://127.0.0.1:7059/protolator/encode/transport.Config > updated_${new_org}_config.pb \
 #  && curl -X POST -F channel=$channel -F 'original=@${new_org}_config.pb' -F 'updated=@updated_${new_org}_config.pb' http://127.0.0.1:7059/configtxlator/compute/update-from-configs > update_${new_org}.pb \
-#  && curl -X POST --data-binary @update_${new_org}.pb http://127.0.0.1:7059/protolator/decode/common.ConfigUpdate | jq . > update_${new_org}.json \
+#  && curl -X POST --data-binary @update_${new_org}.pb http://127.0.0.1:7059/protolator/decode/transport.ConfigUpdate | jq . > update_${new_org}.json \
 #  && echo 'wc for artifacts/update_${new_org}.json: $(wc -c < artifacts/update_${new_org}.json)' \
 #  && echo '{\"payload\":{\"header\":{\"channel_header\":{\"channel_id\":\"$channel\",\"type\":2}},\"data\":{\"config_update\":'\`cat update_$new_org.json\`'}}}' | jq . > update_${new_org}_in_envelope.json \
 #  && echo 'wc for artifacts/update_${new_org}_in_envelope.json: $(wc -c < artifacts/update_${new_org}_in_envelope.json)' \
-#  && curl -X POST --data-binary @update_${new_org}_in_envelope.json http://127.0.0.1:7059/protolator/encode/common.Envelope > update_${new_org}_in_envelope.pb \
+#  && curl -X POST --data-binary @update_${new_org}_in_envelope.json http://127.0.0.1:7059/protolator/encode/transport.Envelope > update_${new_org}_in_envelope.pb \
 #  && echo 'Finished update_${new_org}_in_envelope.pb preparation!' && pkill configtxlator && exit 0"
 #
 #  # now update the channel with the config delta envelop
@@ -1022,16 +1021,16 @@ function updateSignPolicyForChannel() {
 
 #  c="echo '$policy' > new_policy.json \
 #  && peer channel fetch config config_block.pb -o orderer.$DOMAIN:7050 -c $channel --tls --cafile /etc/hyperledger/crypto/orderer/tls/ca.crt \
-#  && curl -X POST --data-binary @config_block.pb http://127.0.0.1:7059/protolator/decode/common.Block | jq . > config_block.json \
+#  && curl -X POST --data-binary @config_block.pb http://127.0.0.1:7059/protolator/decode/transport.Block | jq . > config_block.json \
 #  && jq .data.data[0].payload.data.config config_block.json > config.json \
 #  && jq -s '.[0] * {\"channel_group\":{\"groups\":{\"Application\":{\"mod_policy\": \"${policyName}\", \"policies\":.[1]}}}}' config.json new_policy.json >& updated_config.json \
 #  \
-#  && curl -X POST --data-binary @config.json http://127.0.0.1:7059/protolator/encode/common.Config > config.pb \
-#  && curl -X POST --data-binary @updated_config.json http://127.0.0.1:7059/protolator/encode/common.Config > updated_config.pb \
+#  && curl -X POST --data-binary @config.json http://127.0.0.1:7059/protolator/encode/transport.Config > config.pb \
+#  && curl -X POST --data-binary @updated_config.json http://127.0.0.1:7059/protolator/encode/transport.Config > updated_config.pb \
 #  && curl -X POST -F channel=$channel -F 'original=@config.pb' -F 'updated=@updated_config.pb' http://127.0.0.1:7059/configtxlator/compute/update-from-configs > update.pb \
-#  && curl -X POST --data-binary @update.pb http://127.0.0.1:7059/protolator/decode/common.ConfigUpdate | jq . > update.json \
+#  && curl -X POST --data-binary @update.pb http://127.0.0.1:7059/protolator/decode/transport.ConfigUpdate | jq . > update.json \
 #  && echo '{\"payload\":{\"header\":{\"channel_header\":{\"channel_id\":\"$channel\",\"type\":2}},\"data\":{\"config_update\":'\`cat update.json\`'}}}' | jq . > update_in_envelope.json \
-#  && curl -X POST --data-binary @update_in_envelope.json http://127.0.0.1:7059/protolator/encode/common.Envelope > update_in_envelope.pb \
+#  && curl -X POST --data-binary @update_in_envelope.json http://127.0.0.1:7059/protolator/encode/transport.Envelope > update_in_envelope.pb \
 #  && pkill configtxlator"
 #
 #  info "$org is generating config tx file update_in_envelope.pb with $d by $c"
@@ -1103,7 +1102,7 @@ function generateWait() {
 }
 
 function printArgs() {
-  echo "$DOMAIN, $ORG1, $ORG2, $ORG3, $IP1, $IP2, $IP3"
+  echo "$DOMAIN, $ORG1, $ORG2, $ORG3, $ORG4, $IP1, $IP2, $IP3"
 }
 
 # Print the usage message
@@ -1170,30 +1169,28 @@ while getopts "h?m:o:a:w:c:0:1:2:3:k:v:i:n:M:I:R:" opt; do
 done
 
 if [ "${MODE}" == "up" -a "${ORG}" == "" ]; then
-  for org in ${DOMAIN} ${ORG1} ${ORG2} ${ORG3}
+  for org in ${DOMAIN} ${ORG1} ${ORG2} ${ORG3} ${ORG4}
   do
     dockerComposeUp ${org}
   done
 
-  for org in ${ORG1} ${ORG2} ${ORG3}
+  for org in ${ORG1} ${ORG2} ${ORG3} ${ORG4}
   do
     installAll ${org}
   done
 
-  createJoinInstantiateWarmUp ${ORG1} common ${CHAINCODE_COMMON_NAME} ${CHAINCODE_COMMON_INIT}
-  createJoinInstantiateWarmUp ${ORG1} "${ORG1}-${ORG2}" ${CHAINCODE_BILATERAL_NAME} ${CHAINCODE_BILATERAL_INIT}
-  createJoinInstantiateWarmUp ${ORG1} "${ORG1}-${ORG3}" ${CHAINCODE_BILATERAL_NAME} ${CHAINCODE_BILATERAL_INIT}
+  createJoinInstantiateWarmUp ns transport travel '{"Args":["init","a","100","b","100"]}'
+  joinWarmUp veolia transport travel
 
-  joinWarmUp ${ORG2} common ${CHAINCODE_COMMON_NAME}
-  joinWarmUp ${ORG2} "${ORG1}-${ORG2}" ${CHAINCODE_BILATERAL_NAME}
-  createJoinInstantiateWarmUp ${ORG2} "${ORG2}-${ORG3}" ${CHAINCODE_BILATERAL_NAME} ${CHAINCODE_BILATERAL_INIT}
+  createJoinInstantiateWarmUp card card-bank issue '{"Args":["init","a","100","b","100"]}'
+  joinWarmUp bank card-bank issue
 
-  joinWarmUp ${ORG3} common ${CHAINCODE_COMMON_NAME}
-  joinWarmUp ${ORG3} "${ORG1}-${ORG3}" ${CHAINCODE_BILATERAL_NAME}
-  joinWarmUp ${ORG3} "${ORG2}-${ORG3}" ${CHAINCODE_BILATERAL_NAME}
+  createJoinInstantiateWarmUp bank bank-transport payment '{"Args":["init","a","100","b","100"]}'
+  joinWarmUp ns bank-transport payment
+  joinWarmUp veolia bank-transport payment
 
 elif [ "${MODE}" == "down" ]; then
-  for org in ${DOMAIN} ${ORG1} ${ORG2} ${ORG3}
+  for org in ${DOMAIN} ${ORG1} ${ORG2} ${ORG3} ${ORG4}
   do
     dockerComposeDown ${org}
   done
@@ -1209,6 +1206,7 @@ elif [ "${MODE}" == "generate" ]; then
   generatePeerArtifacts ${ORG1} 4000 8081 7054 7051 7053 7056 7058
   generatePeerArtifacts ${ORG2} 4001 8082 8054 8051 8053 8056 8058
   generatePeerArtifacts ${ORG3} 4002 8083 9054 9051 9053 9056 9058
+  generatePeerArtifacts ${ORG4} 4003 8084 1054 1051 1053 1056 1058
   generateOrdererDockerCompose ${ORG1}
   generateOrdererArtifacts
   #generateWait
@@ -1234,7 +1232,7 @@ elif [ "${MODE}" == "up-one-org" ]; then # params: -o ORG -M mainOrg -k CHANNELS
     createChannel ${ORG} $CHANNELS
     joinChannel ${ORG} $CHANNELS
   fi
-elif [ "${MODE}" == "update-sign-policy" ]; then # params: -o ORG -k common_channel
+elif [ "${MODE}" == "update-sign-policy" ]; then # params: -o ORG -k transport_channel
   updateSignPolicyForChannel $ORG $CHANNELS
 
 elif [ "${MODE}" == "register-new-org" ]; then # params: -o ORG -M MAIN_ORG -i IP; example: ./network.sh -m register-new-org -o testOrg -i 172.12.34.56
@@ -1294,7 +1292,7 @@ elif [ "${MODE}" == "install-chaincode" ]; then # example: install-chaincode -o 
   sleep 1
   installChaincode ${ORG} ${CHAINCODE} ${CHAINCODE_VERSION}
 
-elif [ "${MODE}" == "instantiate-chaincode" ]; then # example: instantiate-chaincode -o nsd -k common -n book
+elif [ "${MODE}" == "instantiate-chaincode" ]; then # example: instantiate-chaincode -o nsd -k transport -n book
   [[ -z "${ORG}" ]] && echo "missing required argument -o ORG: organization name to install chaincode into" && exit 1
   [[ -z "${CHAINCODE}" ]] && echo "missing required argument -d CHAINCODE: chaincode name to install" && exit 1
   [[ -z "${CHANNELS}" ]] && echo "missing required argument -k CHANNELS: channels list" && exit 1
@@ -1302,7 +1300,7 @@ elif [ "${MODE}" == "instantiate-chaincode" ]; then # example: instantiate-chain
   sleep 1
   instantiateChaincode ${ORG} "${CHANNELS}" ${CHAINCODE} ${CHAINCODE_INIT_ARG}
 
-elif [ "${MODE}" == "warmup-chaincode" ]; then # example: instantiate-chaincode -o nsd -k common -n book
+elif [ "${MODE}" == "warmup-chaincode" ]; then # example: instantiate-chaincode -o nsd -k transport -n book
   [[ -z "${ORG}" ]] && echo "missing required argument -o ORG: organization name to install chaincode into" && exit 1
   [[ -z "${CHAINCODE}" ]] && echo "missing required argument -d CHAINCODE: chaincode name to install" && exit 1
   [[ -z "${CHANNELS}" ]] && echo "missing required argument -k CHANNELS: channels" && exit 1
@@ -1310,23 +1308,23 @@ elif [ "${MODE}" == "warmup-chaincode" ]; then # example: instantiate-chaincode 
   sleep 3
   warmUpChaincode ${ORG} "${CHANNELS}" ${CHAINCODE} ${CHAINCODE_INIT_ARG}
 elif [ "${MODE}" == "up-1" ]; then
-  downloadArtifactsMember ${ORG1} "" "" common "${ORG1}-${ORG2}" "${ORG1}-${ORG3}"
+  downloadArtifactsMember ${ORG1} "" "" transport "${ORG1}-${ORG2}" "${ORG1}-${ORG3}"
   dockerComposeUp ${ORG1}
   installAll ${ORG1}
 
-  createJoinInstantiateWarmUp ${ORG1} common ${CHAINCODE_COMMON_NAME} ${CHAINCODE_COMMON_INIT}
+  createJoinInstantiateWarmUp ${ORG1} transport ${CHAINCODE_COMMON_NAME} ${CHAINCODE_COMMON_INIT}
 
   createJoinInstantiateWarmUp ${ORG1} "${ORG1}-${ORG2}" ${CHAINCODE_BILATERAL_NAME} ${CHAINCODE_BILATERAL_INIT}
 
   createJoinInstantiateWarmUp ${ORG1} "${ORG1}-${ORG3}" ${CHAINCODE_BILATERAL_NAME} ${CHAINCODE_BILATERAL_INIT}
 
 elif [ "${MODE}" == "up-2" ]; then
-  downloadArtifactsMember ${ORG2} "" "" common "${ORG1}-${ORG2}" "${ORG2}-${ORG3}"
+  downloadArtifactsMember ${ORG2} "" "" transport "${ORG1}-${ORG2}" "${ORG2}-${ORG3}"
   dockerComposeUp ${ORG2}
   installAll ${ORG2}
 
-  downloadChannelBlockFile ${ORG2} ${ORG1} common
-  joinWarmUp ${ORG2} common ${CHAINCODE_COMMON_NAME}
+  downloadChannelBlockFile ${ORG2} ${ORG1} transport
+  joinWarmUp ${ORG2} transport ${CHAINCODE_COMMON_NAME}
 
   downloadChannelBlockFile ${ORG2} ${ORG1} "${ORG1}-${ORG2}"
   joinWarmUp ${ORG2} "${ORG1}-${ORG2}" ${CHAINCODE_BILATERAL_NAME}
@@ -1334,12 +1332,12 @@ elif [ "${MODE}" == "up-2" ]; then
   createJoinInstantiateWarmUp ${ORG2} "${ORG2}-${ORG3}" ${CHAINCODE_BILATERAL_NAME} ${CHAINCODE_BILATERAL_INIT}
 
 elif [ "${MODE}" == "up-3" ]; then
-  downloadArtifactsMember ${ORG3} "" "" common "${ORG1}-${ORG3}" "${ORG2}-${ORG3}"
+  downloadArtifactsMember ${ORG3} "" "" transport "${ORG1}-${ORG3}" "${ORG2}-${ORG3}"
   dockerComposeUp ${ORG3}
   installAll ${ORG3}
 
-  downloadChannelBlockFile ${ORG3} ${ORG1} common
-  joinWarmUp ${ORG3} common ${CHAINCODE_COMMON_NAME}
+  downloadChannelBlockFile ${ORG3} ${ORG1} transport
+  joinWarmUp ${ORG3} transport ${CHAINCODE_COMMON_NAME}
 
   downloadChannelBlockFile ${ORG3} ${ORG2} "${ORG2}-${ORG3}"
   joinWarmUp ${ORG3} "${ORG2}-${ORG3}" ${CHAINCODE_BILATERAL_NAME}
@@ -1351,7 +1349,7 @@ elif [ "${MODE}" == "addOrg" ]; then
   [[ -z "${ORG}" ]] && echo "missing required argument -o ORG" && exit 1
   [[ -z "${CHANNELS}" ]] && echo "missing required argument -k CHANNEL" && exit 1
 
-  #./network.sh -m addOrg -o foo -k common -a 4003 -w 8084 -c 1054 -0 1051 -1 1053 -2 1056 -3 1058
+  #./network.sh -m addOrg -o foo -k transport -a 4003 -w 8084 -c 1054 -0 1051 -1 1053 -2 1056 -3 1058
 
   addOrg ${ORG} ${CHANNELS}
 
