@@ -39,9 +39,6 @@ func (t *PaymentChaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response 
 	if function == "request" {
 		// Make payment of x units from a to b
 		return t.request(stub, args)
-	} /*else if function == "delete" {
-		// Deletes an entity from its state
-		return t.delete(stub, args)*/
 	} else if function == "query" {
 		// the old "Query" is now implemented in invoke
 		return t.query(stub, args)

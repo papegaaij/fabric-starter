@@ -41,7 +41,7 @@ module.exports = function (require) {
             logger.trace(`event ${event.event_name}`);
 
             invoke.invokeChaincode(["grpcs://peer0.bank.transport-chain.nl:7051"],
-              'bank-transport', 'payment', 'pay', [], USERNAME, ORG)
+              'bank-transport', 'payment', 'request', ["1", "40"], USERNAME, ORG)
             .then(transactionId => {
               logger.info('invokeChaincode success ' + transactionId);
             })
